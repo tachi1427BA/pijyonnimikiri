@@ -145,6 +145,11 @@
             opacity: 0.5;
         }
 
+        .character-container.player-defeated .character-img {
+            transform: rotate(-90deg) scale(0.9);
+            opacity: 0.5;
+        }
+
         .victory-effect {
             position: absolute;
             inset: 0;
@@ -677,7 +682,7 @@
                         if (gameState === 'signal') {
                             gameState = 'result';
                             message.textContent = '遅すぎる... 集中せよ';
-                            showVictoryAnimation();
+                            showVictoryAnimation(false); // プレイヤーの負け
                             updateUI();
                         }
                     }, 2000);
@@ -699,12 +704,12 @@
                 }
                 
                 if (gameState === 'ready') {
-                    // フライング - それでも勝利演出
+                    // フライング
                     gameState = 'result';
                     message.textContent = 'フライング！ 早すぎるぞ！';
                     attemptsCount++;
                     clearTimeout(gameTimeout);
-                    showVictoryAnimation();
+                    showVictoryAnimation(null); // フライングでは誰も倒れない
                     updateUI();
                     return;
                 }
@@ -732,7 +737,7 @@
                         message.textContent = 'まだまだ修行が必要だ ' + reaction + 'ms';
                     }
                     
-                    showVictoryAnimation();
+                    showVictoryAnimation(stageCleared);
                     updateUI();
                 }
                 
@@ -746,6 +751,11 @@
                         currentStage = 1;
                         resetGame();
                     } else {
+                        // 失敗した場合、ステージを1つ下げる（ただし1より下にはしない）
+                        if (!stageCleared && currentStage > 1) {
+                            currentStage--;
+                        }
+                        updateStageDisplay(); // ステージ表示を即時更新
                         // 再挑戦
                         resetGame();
                     }
@@ -753,7 +763,7 @@
             }
 
             // 勝利アニメーション表示（改良版）
-            function showVictoryAnimation() {
+            function showVictoryAnimation(isPlayerVictory) {
                 isAnimating = true;
                 
                 // すべてのタイマーをクリア
@@ -765,9 +775,14 @@
                     {
                         delay: 700,
                         action: function() {
-                            if (enemyContainer) enemyContainer.classList.add('victory');
-                            if (enemyLabel) enemyLabel.style.opacity = '0.5';
-                            if (enemyEffect) enemyEffect.classList.add('show');
+                            if (isPlayerVictory === true) {
+                                if (enemyContainer) enemyContainer.classList.add('victory');
+                                if (enemyLabel) enemyLabel.style.opacity = '0.5';
+                                if (enemyEffect) enemyEffect.classList.add('show');
+                            } else if (isPlayerVictory === false) {
+                                if (playerContainer) playerContainer.classList.add('player-defeated');
+                            }
+                            // isPlayerVictoryがnullの場合は何もしない
                         }
                     },
                     // 1.5秒: ステージクリア判定
@@ -881,6 +896,9 @@
                 if (enemyContainer) {
                     enemyContainer.classList.remove('victory');
                 }
+                if (playerContainer) {
+                    playerContainer.classList.remove('player-defeated');
+                }
                 if (enemyLabel) {
                     enemyLabel.style.opacity = '1';
                 }
@@ -907,10 +925,7 @@
                     playerContainer.classList.add('signal');
                     enemyContainer.classList.add('signal');
                 } else if (gameState === 'result') {
-                    // 勝利状態：プレイヤーが光る、敵が倒れる
-                    playerContainer.classList.add('victory');
-                    enemyContainer.classList.add('victory');
-                    enemyLabel.style.opacity = '0.5';
+                    // 勝利状態のアニメーションはshowVictoryAnimationで制御
                 } else {
                     enemyLabel.style.opacity = '1';
                 }
